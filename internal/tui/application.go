@@ -20,15 +20,15 @@ type Application struct {
 	width, height int
 
 	currentView int
-	views       map[int]View
+	views       map[int]views.View
 }
 
 // NewApplication creates and returns a new Application instance.
 func NewApplication() *Application {
 	return &Application{
 		width:  80,
-		height: 24,
-		views: map[int]View{
+		height: 0,
+		views: map[int]views.View{
 			SearchView: views.NewSearchView(80),
 		},
 	}
@@ -58,7 +58,12 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width - 2
-		a.height = msg.Height - 2
+		a.height = msg.Height - 4
+
+		for _, view := range a.views {
+			view.SetSize(a.width, a.height)
+		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
@@ -68,7 +73,11 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			a.currentView = newIndex
 
-			return a, nil
+			var cmd tea.Cmd
+			if newIndex == SearchView {
+				cmd = a.views[SearchView].Update(msg)
+			}
+			return a, cmd
 		case "ctrl+f":
 			a.currentView = SearchView
 			sv := views.NewSearchView(a.width - 4)
@@ -104,16 +113,23 @@ func (a *Application) View() string {
 	style := lippgloss.NewStyle().
 		Padding(1, 2).
 		Width(a.width).
-		Height(a.height).
 		Border(lippgloss.RoundedBorder()).
 		BorderForeground(themes.TokyoNight.Border).
 		Background(themes.TokyoNight.Background).
-		Foreground(themes.TokyoNight.Background)
+		Foreground(themes.TokyoNight.Foreground)
 
-	return lippgloss.PlaceVertical(
-		a.height,
+	title := lippgloss.NewStyle().
+		Bold(true).
+		Margin(0, 0, 1, 0).
+		Foreground(themes.TokyoNight.Highlight).
+		Render("RMT - Redmine Management Tool")
+
+	// Application.View renders the main application UI with a title and the current view.
+	return lippgloss.JoinVertical(
 		lippgloss.Top,
 		style.Render(
+			title,
+			"\n",
 			a.views[a.currentView].Render(),
 		),
 	)

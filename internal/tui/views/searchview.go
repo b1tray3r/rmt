@@ -5,6 +5,7 @@ import (
 	"github.com/b1tray3r/rmt/internal/tui/themes"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type SearchView struct {
@@ -29,7 +30,7 @@ func NewSearchView(width int) *SearchView {
 	ti.Focus()
 	ti.CharLimit = 256
 	ti.Width = width
-	ti.Prompt = "> "
+	ti.Prompt = "󰅬 "
 
 	return &SearchView{
 		SearchInput: &ti,
@@ -42,8 +43,9 @@ func (v *SearchView) SetSize(width, height int) {
 	v.height = height
 }
 
+// Init initializes the SearchView and returns the blinking cursor command.
 func (v *SearchView) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (v *SearchView) Update(msg tea.Msg) tea.Cmd {
@@ -59,8 +61,6 @@ func (v *SearchView) Update(msg tea.Msg) tea.Cmd {
 			}
 		case "esc":
 			v.SearchInput.SetValue("")
-			v.SearchInput.Blur()
-			return nil
 		}
 	}
 
@@ -70,5 +70,25 @@ func (v *SearchView) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (v *SearchView) Render() string {
-	return v.SearchInput.View()
+	headline := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(themes.TokyoNight.Secondary).
+		Padding(1, 0).
+		Render("󰡦 Search issues:")
+
+	inputView := lipgloss.NewStyle().
+		Width(v.width).
+		Padding(0, 2).
+		Render(v.SearchInput.View())
+
+	hint := lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Muted).
+		PaddingTop(v.height - 7).
+		Render("Press 'Enter' to search, 'Esc' to clear, 'Ctrl+c' to quit")
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		headline,
+		inputView,
+		hint,
+	)
 }
