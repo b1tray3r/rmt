@@ -8,11 +8,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func main() {
+// run starts the TUI application
+func run() error {
 	app := tui.NewApplication()
 
 	program := tea.NewProgram(app, tea.WithAltScreen())
-	if _, err := program.Run(); err != nil {
+	_, err := program.Run()
+	return err
+}
+
+func main() {
+	if err := run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
