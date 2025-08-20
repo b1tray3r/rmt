@@ -1,0 +1,12 @@
+# Example RMT Configuration
+# Place this file at ~/.config/rmt/config.yml
+
+redmine:
+  url: "https://your-redmine-instance.com"
+  token: "your-api-token-here"
+  activities:
+    prefix:
+      - "Development"
+      - "Testing"
+      - "Documentation"
+      - "Analysis"
