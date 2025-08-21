@@ -83,7 +83,7 @@ func (v *SearchView) Render() string {
 
 	hint := lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Muted).
-		PaddingTop(v.height - 7).
+		PaddingTop(v.height - 8).
 		Render("Press 'Enter' to search, 'Esc' to clear, 'Ctrl+c' to quit")
 
 	return lipgloss.JoinVertical(lipgloss.Left,

@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/b1tray3r/rmt/internal/domain"
+	"github.com/b1tray3r/rmt/internal/tui/domain"
 	"github.com/b1tray3r/rmt/internal/tui/messages"
 	"github.com/b1tray3r/rmt/internal/tui/themes"
 	"github.com/b1tray3r/rmt/internal/tui/views"
@@ -11,9 +11,10 @@ import (
 
 const (
 	SearchView = iota
+	LoadingView
 	ListView
 	IssueView
-	TimelogView
+	TimeLogView
 )
 
 type Application struct {
@@ -42,13 +43,13 @@ func (a *Application) Init() tea.Cmd {
 }
 
 func (a *Application) searchIssues(query string) tea.Cmd {
-	results := []domain.Issue{
-		{ID: 1, Link: "https://example.com/issue/1", Author: "Alice", Subject: "Issue 1", Content: "Description for issue 1"},
-		{ID: 2, Link: "https://example.com/issue/2", Author: "Bob", Subject: "Issue 2", Content: "Description for issue 2"},
-		{ID: 3, Link: "https://example.com/issue/3", Author: "Charlie", Subject: "Issue 3", Content: "Description for issue 3"},
-	}
-
 	return func() tea.Msg {
+		results := []*domain.Issue{
+			domain.NewIssue(1, "https://example.com/issue/1", "Alice", "Issue 1", "Description for issue 1"),
+			domain.NewIssue(2, "https://example.com/issue/2", "Bob", "Issue 2", "Description for issue 2"),
+			domain.NewIssue(3, "https://example.com/issue/3", "Charlie", "Issue 3", "Description for issue 3"),
+		}
+
 		return messages.SearchCompletedMsg{Results: results}
 	}
 }
@@ -68,6 +69,10 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc":
 			newIndex := a.currentView - 1
+			if newIndex == LoadingView {
+				newIndex = SearchView
+			}
+			// Skip the loading view
 			if _, ok := a.views[newIndex]; !ok {
 				newIndex = SearchView
 			}
@@ -80,27 +85,61 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		case "ctrl+f":
 			a.currentView = SearchView
-			sv := views.NewSearchView(a.width - 4)
-			a.views[SearchView] = sv
-			return a, nil
+
+			var cmd tea.Cmd
+			if a.currentView == SearchView {
+				cmd = a.views[SearchView].Update(msg)
+			}
+			return a, cmd
 		case "ctrl+c":
 			return a, tea.Quit
 		}
 	case messages.SearchSubmittedMsg:
-		return a, a.searchIssues(msg.Query)
+		// Switch to loading view
+		a.currentView = LoadingView
+		lv := views.NewLoadingView(a.width, "Searching issues")
+		lv.SetSize(a.width, a.height-3)
+		a.views[LoadingView] = lv
+
+		// Start the search operation
+		return a, tea.Batch(
+			lv.Init(),
+			a.searchIssues(msg.Query),
+		)
+
+	case messages.TimeEntryCreateMsg:
+		a.currentView = TimeLogView
+		iv := views.NewIssueView(a.width, msg.Issue)
+		iv.SetSize(a.width, a.height-4)
+		a.views[IssueView] = iv
+
+		tv := views.NewTimeLogView(a.width, msg.Issue)
+		tv.SetSize(a.width, a.height-2)
+		a.views[TimeLogView] = tv
+		return a, tv.Init()
 
 	case messages.SearchCompletedMsg:
 		if msg.Error != nil {
+			// Handle error case - could show error view or return to search view
+			a.currentView = SearchView
 			return a, nil
 		}
 
+		// Switch to list view with results
 		a.currentView = ListView
 		lv := views.NewListView(a.width)
 		lv.SetItems(msg.Results)
-		lv.SetSize(a.width, a.height-2)
+		lv.SetSize(a.width, a.height-4)
 		a.views[ListView] = lv
 
 		return a, nil
+
+	case messages.IssueSelectedMsg:
+		a.currentView = IssueView
+		iv := views.NewIssueView(a.width, msg.Issue)
+		iv.SetSize(a.width, a.height-4)
+		a.views[IssueView] = iv
+		return a, iv.Init()
 	}
 
 	cmd := a.views[a.currentView].Update(msg)

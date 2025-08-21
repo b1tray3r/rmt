@@ -1,7 +1,8 @@
 package views
 
 import (
-	"github.com/b1tray3r/rmt/internal/domain"
+	"github.com/b1tray3r/rmt/internal/tui/domain"
+	"github.com/b1tray3r/rmt/internal/tui/messages"
 	"github.com/b1tray3r/rmt/internal/tui/themes"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -71,9 +72,24 @@ func NewListView(maxWidth int) *ListView {
 		0,
 	)
 	list.SetShowTitle(false)
+	list.SetShowHelp(false) // Disable default help to render our own
 
-	list.KeyMap.Quit.SetKeys("ctrl+c")
-	list.KeyMap.Quit.SetHelp("ctrl+c", "quit")
+	// Apply Tokyo Night theme to list styles (help text, status bar, etc.)
+	list.Styles.HelpStyle = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Muted).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.StatusBar = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Foreground).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.FilterPrompt = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Primary).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.FilterCursor = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Highlight).
+		Background(themes.TokyoNight.Background)
 
 	return &ListView{
 		list: list,
@@ -84,10 +100,10 @@ func (v *ListView) SetSize(width, height int) {
 	v.list.SetSize(width, height)
 }
 
-func (v *ListView) SetItems(items []domain.Issue) {
+func (v *ListView) SetItems(items []*domain.Issue) {
 	i := make([]list.Item, 0, len(items))
 	for _, issue := range items {
-		i = append(i, &issue)
+		i = append(i, issue)
 	}
 	v.list.SetItems(i)
 }
@@ -116,6 +132,22 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 			}
 
 			return nil
+		case "t":
+			if selectedItem := v.list.SelectedItem(); selectedItem != nil {
+				if issueItem, ok := selectedItem.(*domain.Issue); ok {
+					return func() tea.Msg {
+						return messages.TimeEntryCreateMsg{Issue: issueItem}
+					}
+				}
+			}
+		case "enter":
+			if selectedItem := v.list.SelectedItem(); selectedItem != nil {
+				if issueItem, ok := selectedItem.(*domain.Issue); ok {
+					return func() tea.Msg {
+						return messages.IssueSelectedMsg{Issue: issueItem}
+					}
+				}
+			}
 		}
 	}
 
@@ -126,5 +158,16 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 
 // Render renders the ListView to a string.
 func (v *ListView) Render() string {
-	return v.list.View()
+	listView := v.list.View()
+
+	// Create custom help text with proper theme styling
+	helpStyle := lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Muted).
+		Background(themes.TokyoNight.Background).
+		Padding(0, 1)
+
+	helpText := "↑/↓: navigate • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
+	styledHelp := helpStyle.Render(helpText)
+
+	return lipgloss.JoinVertical(lipgloss.Left, listView, styledHelp)
 }
