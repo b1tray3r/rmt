@@ -30,7 +30,8 @@ func NewListView(maxWidth int) *ListView {
 
 	list.Styles.StatusBar = lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Foreground).
-		Background(themes.TokyoNight.Background)
+		Background(themes.TokyoNight.Background).
+		MarginBottom(1)
 
 	list.Styles.FilterPrompt = lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Primary).
@@ -46,7 +47,7 @@ func NewListView(maxWidth int) *ListView {
 }
 
 func (v *ListView) SetSize(width, height int) {
-	v.list.SetSize(width, height)
+	v.list.SetSize(width, height-3)
 }
 
 func (v *ListView) SetItems(items []*domain.Issue) {
@@ -82,10 +83,13 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 
 			return nil
 		case "t":
-			if selectedItem := v.list.SelectedItem(); selectedItem != nil {
-				if issueItem, ok := selectedItem.(*domain.Issue); ok {
-					return func() tea.Msg {
-						return messages.TimeEntryCreateMsg{Issue: issueItem}
+			// ListView handles the "t" key only when the filter input is not active.
+			if v.list.FilterState() != list.Filtering {
+				if selectedItem := v.list.SelectedItem(); selectedItem != nil {
+					if issueItem, ok := selectedItem.(*domain.Issue); ok {
+						return func() tea.Msg {
+							return messages.TimeEntryCreateMsg{Issue: issueItem}
+						}
 					}
 				}
 			}
