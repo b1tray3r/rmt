@@ -22,16 +22,19 @@ type Application struct {
 
 	currentView int
 	views       map[int]views.View
+
+	issueService *domain.IssueService
 }
 
 // NewApplication creates and returns a new Application instance.
-func NewApplication() *Application {
+func NewApplication(issueService *domain.IssueService) *Application {
 	return &Application{
 		width:  80,
 		height: 0,
 		views: map[int]views.View{
 			SearchView: views.NewSearchView(80),
 		},
+		issueService: issueService,
 	}
 }
 
@@ -43,13 +46,14 @@ func (a *Application) Init() tea.Cmd {
 }
 
 func (a *Application) searchIssues(query string) tea.Cmd {
-	return func() tea.Msg {
-		results := []*domain.Issue{
-			domain.NewIssue(1, "https://example.com/issue/1", "Alice", "Issue 1", "Description for issue 1"),
-			domain.NewIssue(2, "https://example.com/issue/2", "Bob", "Issue 2", "Description for issue 2"),
-			domain.NewIssue(3, "https://example.com/issue/3", "Charlie", "Issue 3", "Description for issue 3"),
+	results, err := a.issueService.Search(query)
+	if err != nil {
+		return func() tea.Msg {
+			return messages.SearchCompletedMsg{Error: err}
 		}
+	}
 
+	return func() tea.Msg {
 		return messages.SearchCompletedMsg{Results: results}
 	}
 }
@@ -98,7 +102,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Switch to loading view
 		a.currentView = LoadingView
 		lv := views.NewLoadingView(a.width, "Searching issues")
-		lv.SetSize(a.width, a.height-3)
+		lv.SetSize(a.width, a.height-5)
 		a.views[LoadingView] = lv
 
 		// Start the search operation
@@ -110,11 +114,11 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.TimeEntryCreateMsg:
 		a.currentView = TimeLogView
 		iv := views.NewIssueView(a.width, msg.Issue)
-		iv.SetSize(a.width, a.height-4)
+		iv.SetSize(a.width, a.height-5)
 		a.views[IssueView] = iv
 
 		tv := views.NewTimeLogView(a.width, msg.Issue)
-		tv.SetSize(a.width, a.height-2)
+		tv.SetSize(a.width, a.height-4)
 		a.views[TimeLogView] = tv
 		return a, tv.Init()
 
@@ -128,7 +132,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.currentView = ListView
 		lv := views.NewListView(a.width)
 		lv.SetItems(msg.Results)
-		lv.SetSize(a.width, a.height-4)
+		lv.SetSize(a.width, a.height)
 		a.views[ListView] = lv
 
 		return a, nil
@@ -136,7 +140,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.IssueSelectedMsg:
 		a.currentView = IssueView
 		iv := views.NewIssueView(a.width, msg.Issue)
-		iv.SetSize(a.width, a.height-4)
+		iv.SetSize(a.width, a.height-5)
 		a.views[IssueView] = iv
 		return a, iv.Init()
 
