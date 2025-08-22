@@ -48,6 +48,20 @@ func (v *IssueView) Render() string {
 		Foreground(themes.TokyoNight.Secondary).
 		Background(themes.TokyoNight.Background)
 
+	pname := "--no-project--"
+	p := v.Issue.Project()
+	if p != nil {
+		pname = p.Name()
+	}
+
+	projectInfo := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		style.
+			Foreground(themes.TokyoNight.Primary).
+			Italic(true).
+			Render(pname),
+	)
+
 	titleInfo := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		style.Italic(true).Render(fmt.Sprintf("#%d", v.Issue.ID())),
@@ -64,16 +78,23 @@ func (v *IssueView) Render() string {
 		Padding(0, 1).
 		Render(helpText)
 
+	linkInfo := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		style.Padding(0, 0, 0, v.width-50).Foreground(themes.TokyoNight.Secondary).Render("  "),
+		style.Foreground(themes.TokyoNight.Link).Render(v.Issue.Link()),
+	)
+
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
+		projectInfo,
+		linkInfo,
 		style.Width(v.width).Render(titleInfo),
-		style.Padding(1, 0).Foreground(themes.TokyoNight.Link).Render(v.Issue.Link()),
-		style.Height(v.height-2).Render(v.Issue.Description()),
+		style.PaddingTop(2).Height(v.height-4).Render(v.Issue.Description()),
 		help,
 	)
 }
 
 func (v *IssueView) SetSize(width, height int) {
 	v.width = width
-	v.height = height
+	v.height = height - 2
 }

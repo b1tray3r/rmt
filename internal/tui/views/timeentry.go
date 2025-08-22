@@ -363,6 +363,9 @@ const (
 
 // TimeEntryView handles the time entry interface
 type TimeEntryView struct {
+	width  int
+	height int
+
 	activities       []Activity
 	selectedActivity *Activity
 	datePicker       *DatePicker
@@ -374,13 +377,15 @@ type TimeEntryView struct {
 }
 
 // NewTimeEntryView creates a new time entry view
-func NewTimeEntryView() *TimeEntryView {
+func NewTimeEntryView(width, height int) *TimeEntryView {
 	descInput := textinput.New()
 	descInput.Placeholder = "Data log: describe your digital work..."
 	descInput.CharLimit = 255
-	descInput.Width = 48 // Set a reasonable width
+	descInput.Width = width - 2
 
 	v := &TimeEntryView{
+		width:         width,
+		height:        height,
 		datePicker:    NewDatePicker(),
 		hoursSelector: NewHoursSelector(),
 		descInput:     descInput,
@@ -586,7 +591,7 @@ func (v *TimeEntryView) renderEditingState(title string, issue *domain.Issue, ac
 		"",
 		descSection,
 		"",
-		activitySection,
+		lipgloss.NewStyle().Height(height - 35).Render(activitySection),
 		"",
 		submitSection,
 	}
@@ -749,7 +754,7 @@ func (v *TimeEntryView) renderInput(label string, input textinput.Model, focused
 	}
 
 	return fieldLabelStyle.Render(label) + "\n" +
-		style.Width(50).Padding(0, 1).Render(input.View())
+		style.Width(v.width-4).Padding(0, 1).Render(input.View())
 }
 
 func (v *TimeEntryView) renderDatePicker() string {
@@ -760,7 +765,7 @@ func (v *TimeEntryView) renderDatePicker() string {
 		v.datePicker.Blur()
 	}
 
-	return fieldLabelStyle.Render("Date:") + "\n" + v.datePicker.Render()
+	return fieldLabelStyle.Width(v.width-4).Render("Date:") + "\n" + v.datePicker.Render()
 }
 
 func (v *TimeEntryView) renderHoursSelector() string {
@@ -910,11 +915,11 @@ type TimeLogView struct {
 }
 
 // NewTimeLogView creates a new time log view for backward compatibility
-func NewTimeLogView(width int, issue *domain.Issue) *TimeLogView {
+func NewTimeLogView(width, height int, issue *domain.Issue) *TimeLogView {
 	return &TimeLogView{
 		width:         width,
-		height:        0,
-		timeEntryView: NewTimeEntryView(),
+		height:        height,
+		timeEntryView: NewTimeEntryView(width, height),
 		issue:         issue,
 		activities:    []Activity{}, // Initialize with empty activities, will be loaded later
 	}
@@ -923,7 +928,7 @@ func NewTimeLogView(width int, issue *domain.Issue) *TimeLogView {
 // SetSize sets the dimensions of the time log view
 func (v *TimeLogView) SetSize(width, height int) {
 	v.width = width
-	v.height = height
+	v.height = height - 2
 }
 
 // SetIssue sets the current issue for the time entry

@@ -19,16 +19,14 @@ type View interface {
 	SetSize(width, height int)
 }
 
-// customIssueDelegate implements list.ItemDelegate with custom filtering behavior
-type customIssueDelegate struct {
+type RMTIssueDelegate struct {
 	maxWidth int
 }
 
-func (d customIssueDelegate) Height() int                             { return 3 }
-func (d customIssueDelegate) Spacing() int                            { return 1 }
-func (d customIssueDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-
-func (d customIssueDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (d RMTIssueDelegate) Height() int                             { return 5 }
+func (d RMTIssueDelegate) Spacing() int                            { return 1 }
+func (d RMTIssueDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d RMTIssueDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	issue, ok := item.(*domain.Issue)
 	if !ok {
 		return
@@ -41,15 +39,15 @@ func (d customIssueDelegate) Render(w io.Writer, m list.Model, index int, item l
 		isFiltered  = m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied
 	)
 
-	// Apply highlighting if filtering is active
 	if isFiltered && m.FilterValue() != "" {
 		title = d.highlightMatches(title, m.FilterValue())
 		description = d.highlightMatches(description, m.FilterValue())
 	}
 
-	// Choose styles based on selection state
+	prefix := "- "
 	var titleStyle, descStyle lipgloss.Style
 	if isSelected {
+		prefix = " "
 		titleStyle = lipgloss.NewStyle().
 			Foreground(themes.TokyoNight.Warning).
 			Background(themes.TokyoNight.Background).
@@ -62,22 +60,23 @@ func (d customIssueDelegate) Render(w io.Writer, m list.Model, index int, item l
 			Width(d.maxWidth)
 	} else {
 		titleStyle = lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Background).
+			Foreground(themes.TokyoNight.Primary).
+			Background(themes.TokyoNight.Background).
 			Bold(true).
 			Width(d.maxWidth)
 		descStyle = lipgloss.NewStyle().
 			Foreground(themes.TokyoNight.Border).
+			Background(themes.TokyoNight.Background).
 			Italic(true).
 			Width(d.maxWidth)
 	}
 
-	// Render the item
-	fmt.Fprint(w, titleStyle.Render(title))
+	fmt.Fprint(w, titleStyle.Render(prefix+title))
 	fmt.Fprint(w, "\n")
-	fmt.Fprint(w, descStyle.Render(description))
+	fmt.Fprint(w, descStyle.Padding(1, 2).Render(description))
 }
 
-func (d customIssueDelegate) highlightMatches(text, filter string) string {
+func (d RMTIssueDelegate) highlightMatches(text, filter string) string {
 	if filter == "" {
 		return text
 	}
@@ -85,33 +84,26 @@ func (d customIssueDelegate) highlightMatches(text, filter string) string {
 	filterLower := strings.ToLower(filter)
 	textLower := strings.ToLower(text)
 
-	// Find all matches
 	var result strings.Builder
 	lastEnd := 0
 
 	for i := 0; i < len(textLower); {
 		matchIndex := strings.Index(textLower[i:], filterLower)
 		if matchIndex == -1 {
-			// No more matches, append the rest
 			result.WriteString(text[lastEnd:])
 			break
 		}
 
-		// Adjust match index to be relative to the full string
 		matchIndex += i
-		matchEnd := matchIndex + len(filter)
-
-		// Append text before match
 		result.WriteString(text[lastEnd:matchIndex])
 
-		// Append highlighted match
 		matchStyle := lipgloss.NewStyle().
 			Background(themes.TokyoNight.Warning).
 			Foreground(themes.TokyoNight.Background).
 			Bold(true)
+		matchEnd := matchIndex + len(filter)
 		result.WriteString(matchStyle.Render(text[matchIndex:matchEnd]))
 
-		// Update positions
 		lastEnd = matchEnd
 		i = matchEnd
 	}
@@ -119,7 +111,6 @@ func (d customIssueDelegate) highlightMatches(text, filter string) string {
 	return result.String()
 }
 
-// NewIssueDelegate creates a new delegate for issue items with Tokyo Night theme
 func NewIssueDelegate(maxWidth int) list.ItemDelegate {
-	return customIssueDelegate{maxWidth: maxWidth}
+	return RMTIssueDelegate{maxWidth: maxWidth}
 }
