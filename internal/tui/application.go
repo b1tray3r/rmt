@@ -102,7 +102,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Switch to loading view
 		a.currentView = LoadingView
 		lv := views.NewLoadingView(a.width, "Searching issues")
-		lv.SetSize(a.width, a.height-5)
+		lv.SetSize(a.width, a.height-4)
 		a.views[LoadingView] = lv
 
 		// Start the search operation
@@ -114,11 +114,11 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.TimeEntryCreateMsg:
 		a.currentView = TimeLogView
 		iv := views.NewIssueView(a.width, msg.Issue)
-		iv.SetSize(a.width, a.height-5)
+		iv.SetSize(a.width, a.height)
 		a.views[IssueView] = iv
 
-		tv := views.NewTimeLogView(a.width, msg.Issue)
-		tv.SetSize(a.width, a.height-4)
+		tv := views.NewTimeLogView(a.width, a.height, msg.Issue)
+		tv.SetSize(a.width, a.height)
 		a.views[TimeLogView] = tv
 		return a, tv.Init()
 
@@ -140,7 +140,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.IssueSelectedMsg:
 		a.currentView = IssueView
 		iv := views.NewIssueView(a.width, msg.Issue)
-		iv.SetSize(a.width, a.height-5)
+		iv.SetSize(a.width, a.height)
 		a.views[IssueView] = iv
 		return a, iv.Init()
 
