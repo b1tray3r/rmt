@@ -3,14 +3,21 @@ package views
 import (
 	"github.com/b1tray3r/rmt/internal/tui/messages"
 	"github.com/b1tray3r/rmt/internal/tui/themes"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	SearchInput = iota
+	Favorites
+)
+
 type SearchView struct {
 	width, height int
-	SearchInput   *textinput.Model
+	focusedIndex  int
+	views         map[int]any
 }
 
 func NewSearchView(width int) *SearchView {
@@ -32,9 +39,39 @@ func NewSearchView(width int) *SearchView {
 	ti.Width = width
 	ti.Prompt = "󰅬 "
 
+	list := list.New(
+		[]list.Item{},
+		NewIssueDelegate(width),
+		0,
+		0,
+	)
+	list.SetShowTitle(false)
+	list.SetShowHelp(false) // Disable default help to render our own
+
+	// Apply Tokyo Night theme to list styles (help text, status bar, etc.)
+	list.Styles.HelpStyle = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Muted).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.StatusBar = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Foreground).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.FilterPrompt = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Primary).
+		Background(themes.TokyoNight.Background)
+
+	list.Styles.FilterCursor = lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Highlight).
+		Background(themes.TokyoNight.Background)
+
 	return &SearchView{
-		SearchInput: &ti,
-		width:       width,
+		width:        width,
+		focusedIndex: SearchInput,
+		views: map[int]any{
+			SearchInput: ti,
+			Favorites:   list,
+		},
 	}
 }
 
@@ -52,20 +89,37 @@ func (v *SearchView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "tab":
+			if v.focusedIndex == SearchInput {
+				v.focusedIndex = Favorites
+			} else {
+				v.focusedIndex = SearchInput
+			}
 		case "enter":
-			if v.SearchInput.Value() != "" {
-				query := v.SearchInput.Value()
-				return func() tea.Msg {
-					return messages.SearchSubmittedMsg{Query: query}
+			if v.focusedIndex == SearchInput {
+				view := v.views[SearchInput].(textinput.Model)
+				if view.Value() != "" {
+					query := view.Value()
+					return func() tea.Msg {
+						return messages.SearchSubmittedMsg{Query: query}
+					}
 				}
 			}
 		case "esc":
-			v.SearchInput.SetValue("")
+			if v.focusedIndex == SearchInput {
+				view := v.views[SearchInput].(textinput.Model)
+				view.SetValue("")
+				v.views[SearchInput] = view
+			}
 		}
 	}
 
 	var cmd tea.Cmd
-	*v.SearchInput, cmd = v.SearchInput.Update(msg)
+	if v.focusedIndex == SearchInput {
+		view := v.views[SearchInput].(textinput.Model)
+		view, cmd = view.Update(msg)
+		v.views[SearchInput] = view
+	}
 	return cmd
 }
 
@@ -79,16 +133,21 @@ func (v *SearchView) Render() string {
 	inputView := lipgloss.NewStyle().
 		Width(v.width).
 		Padding(0, 2).
-		Render(v.SearchInput.View())
+		Render(v.views[SearchInput].(textinput.Model).View())
+
+	listView := lipgloss.NewStyle().
+		Width(v.width).
+		Height(v.height - 7).
+		Render(v.views[Favorites].(list.Model).View())
 
 	hint := lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Muted).
-		PaddingTop(v.height - 8).
 		Render("Press 'Enter' to search, 'Esc' to clear, 'Ctrl+c' to quit")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		headline,
 		inputView,
+		listView,
 		hint,
 	)
 }
