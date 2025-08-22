@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/b1tray3r/rmt/internal/redmine"
@@ -9,19 +8,32 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 )
 
+type Project struct {
+	id   int
+	name string
+}
+
+func (p *Project) ID() int {
+	return p.id
+}
+
+func (p *Project) Name() string {
+	return p.name
+}
+
 type Issue struct {
 	id          int
 	link        string
 	author      string
 	title       string
-	project     string
+	project     *Project
 	description string
 }
 
 // Ensure Issue implements the list.Item interface so it can be used in the list view
 var _ list.Item = (*Issue)(nil)
 
-func NewIssue(id int, link, author, title, project, description string) *Issue {
+func NewIssue(id int, link, author, title, description string, project *Project) *Issue {
 	return &Issue{
 		id:          id,
 		link:        link,
@@ -48,20 +60,19 @@ func (i *Issue) FullTitle() string {
 	return i.title
 }
 
+// Description returns the issue description as a single line, replacing "\n*" with ", " and all newlines with spaces, and truncates to 75 runes if necessary.
 func (i *Issue) Description() string {
-	runes := []rune(i.description)
-	for idx, r := range runes {
-		if r == '\n' {
-			runes[idx] = ' '
-		}
-	}
-	processed := strings.Join(strings.Fields(string(runes)), " ")
-	runes = []rune(processed)
+	processed := strings.ReplaceAll(i.description, "\n*", ", ")
+	processed = strings.ReplaceAll(processed, "\n", " ")
+	processed = strings.Join(strings.Fields(processed), " ")
+	runes := []rune(processed)
 	if len(runes) > 75 {
-
 		return string(runes[:75])
 	}
-	return i.description
+	if len(runes) == 0 {
+		return "-- no description --"
+	}
+	return processed
 }
 
 func (i *Issue) FullDescription() string {
@@ -78,6 +89,10 @@ func (i *Issue) Link() string {
 
 func (i *Issue) ID() int {
 	return i.id
+}
+
+func (i *Issue) Project() *Project {
+	return i.project
 }
 
 type IssueService struct {
@@ -108,16 +123,16 @@ func (s *IssueService) Search(query string) ([]*Issue, error) {
 	}
 
 	var result []*Issue
-	for i, issue := range issues.Results {
+	for _, issue := range issues.Results {
 		title := s.cleanTitle(issue.Title)
 
 		ni := NewIssue(
 			issue.ID,
 			issue.URL,
 			"none",
-			fmt.Sprintf("%d: %s", i, title),
-			issue.Project,
+			title,
 			issue.Description,
+			nil,
 		)
 		result = append(result, ni)
 	}
