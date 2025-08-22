@@ -57,11 +57,19 @@ func (v *IssueView) Render() string {
 		style.Italic(true).Foreground(themes.TokyoNight.Primary).Render(v.Issue.Author()),
 	)
 
+	helpText := "t: log time • esc: back • ctrl+c: quit"
+	help := lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Muted).
+		Background(themes.TokyoNight.Background).
+		Padding(0, 1).
+		Render(helpText)
+
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		style.Width(v.width).Render(titleInfo),
 		style.Padding(1, 0).Foreground(themes.TokyoNight.Link).Render(v.Issue.Link()),
 		style.Height(v.height-2).Render(v.Issue.Description()),
+		help,
 	)
 }
 

@@ -9,57 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// NewIssueDelegate creates a new delegate for issue items with Tokyo Night theme
-func NewIssueDelegate(maxWidth int) list.ItemDelegate {
-	d := list.NewDefaultDelegate()
-
-	// Configure the delegate with Tokyo Night theme
-	d.SetHeight(3)
-	d.SetSpacing(1)
-
-	// Apply Tokyo Night theme styles to the delegate using colors from colors.go
-	d.Styles.SelectedTitle = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Secondary).
-		Background(themes.TokyoNight.Background).
-		Width(maxWidth).
-		Bold(true).
-		Padding(0, 1)
-
-	d.Styles.SelectedDesc = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
-		Background(themes.TokyoNight.Background).
-		Width(maxWidth).
-		Italic(true).
-		Padding(0, 1)
-
-	d.Styles.NormalTitle = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Primary).
-		Width(maxWidth).
-		Bold(true)
-
-	d.Styles.NormalDesc = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
-		Width(maxWidth).
-		Italic(true)
-
-	d.Styles.DimmedTitle = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
-		Width(maxWidth)
-
-	d.Styles.DimmedDesc = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
-		Width(maxWidth).
-		Italic(true)
-
-	d.Styles.FilterMatch = lipgloss.NewStyle().
-		Background(themes.TokyoNight.Warning).
-		Foreground(themes.TokyoNight.Background).
-		Width(maxWidth).
-		Bold(true)
-
-	return d
-}
-
 type ListView struct {
 	list list.Model
 }
@@ -160,14 +109,12 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 func (v *ListView) Render() string {
 	listView := v.list.View()
 
-	// Create custom help text with proper theme styling
+	helpText := "↑/↓: navigate • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
 	helpStyle := lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Muted).
 		Background(themes.TokyoNight.Background).
-		Padding(0, 1)
+		Padding(0, 1).
+		Render(helpText)
 
-	helpText := "↑/↓: navigate • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
-	styledHelp := helpStyle.Render(helpText)
-
-	return lipgloss.JoinVertical(lipgloss.Left, listView, styledHelp)
+	return lipgloss.JoinVertical(lipgloss.Left, listView, helpStyle)
 }
