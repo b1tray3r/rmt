@@ -8,3 +8,7 @@ import (
 type IssueSelectedMsg struct {
 	Issue *domain.Issue
 }
+
+// ReturnToIssueMsg indicates the user wants to return to issue view
+// Parent applications should handle this message to navigate back to issue view
+type ReturnToIssueMsg struct{}

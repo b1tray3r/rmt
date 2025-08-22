@@ -120,7 +120,6 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.SearchCompletedMsg:
 		if msg.Error != nil {
-			// Handle error case - could show error view or return to search view
 			a.currentView = SearchView
 			return a, nil
 		}
@@ -140,6 +139,10 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		iv.SetSize(a.width, a.height-4)
 		a.views[IssueView] = iv
 		return a, iv.Init()
+
+	case messages.ReturnToIssueMsg:
+		a.currentView = IssueView
+		return a, nil
 	}
 
 	cmd := a.views[a.currentView].Update(msg)
