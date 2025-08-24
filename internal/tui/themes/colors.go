@@ -26,7 +26,7 @@ var TokyoNight = Theme{
 	Success:       ColorGreen,
 	Warning:       ColorYellow,
 	Error:         ColorRed,
-	Info:          ColorCyan,
+	Info:          ColorBlueCyan,
 	Background:    ColorBgNight,
 	BackgroundAlt: ColorBgStorm,
 	Foreground:    ColorWhite,
