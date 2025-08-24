@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/b1tray3r/rmt/internal/redmine"
@@ -95,17 +97,53 @@ func (i *Issue) Project() *Project {
 	return i.project
 }
 
-type IssueService struct {
+// IssueBaseURLProvider defines an interface for retrieving the base URL for issues.
+type IssueBaseURLProvider interface {
+	GetBaseURL() string
+}
+
+// IssueGetter defines an interface for retrieving a single issue by its ID.
+type IssueGetter interface {
+	GetIssue(id int) (*Issue, error)
+}
+
+// IssueSearcher defines an interface for searching issues by a query string.
+type IssueSearcher interface {
+	Search(query string) ([]*Issue, error)
+}
+
+type TimeEntryCreator interface {
+	CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error)
+}
+
+type ProjectActivityGetter interface {
+	GetProjectActivities(projectID int) (map[int]string, error)
+}
+
+// IssueRepository composes the one-purpose interfaces for issue operations.
+type IssueRepository interface {
+	IssueBaseURLProvider
+	IssueGetter
+	IssueSearcher
+	TimeEntryCreator
+	ProjectActivityGetter
+}
+
+type RedmineIssueRepository struct {
 	client redmine.RedmineAPI
 }
 
-func NewIssueService(client redmine.RedmineAPI) *IssueService {
-	return &IssueService{
+func NewRedmineIssueRepository(client redmine.RedmineAPI) *RedmineIssueRepository {
+	return &RedmineIssueRepository{
 		client: client,
 	}
 }
 
-func (s *IssueService) cleanTitle(title string) string {
+func (s *RedmineIssueRepository) GetBaseURL() string {
+	return s.client.GetBaseURL()
+}
+
+func (s *RedmineIssueRepository) cleanTitle(title string) string {
 	parts := strings.Split(title, ": ")
 	if len(parts) > 1 {
 		return strings.Join(parts[1:], ": ")
@@ -114,7 +152,68 @@ func (s *IssueService) cleanTitle(title string) string {
 	return title
 }
 
-func (s *IssueService) Search(query string) ([]*Issue, error) {
+func (s *RedmineIssueRepository) GetProjectActivities(projectID int) (map[int]string, error) {
+	project, err := s.client.GetProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[int]string)
+	for _, activity := range project.TimeEntryActivities {
+		result[activity.ID] = activity.Name
+	}
+
+	return result, nil
+}
+
+func (s *RedmineIssueRepository) CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error) {
+	return s.client.CreateTimeEntry(params)
+}
+
+func (s *RedmineIssueRepository) GetIssue(id int) (*Issue, error) {
+	issue, err := s.client.GetIssue(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIssue(
+		issue.ID,
+		fmt.Sprintf("%s/issues/%d", s.GetBaseURL(), issue.ID),
+		issue.Author.Name,
+		s.cleanTitle(issue.Subject),
+		issue.Description,
+		&Project{
+			id:   issue.Project.ID,
+			name: issue.Project.Name,
+		},
+	), nil
+}
+
+func (s *RedmineIssueRepository) Search(query string) ([]*Issue, error) {
+	if strings.HasPrefix(query, "#") {
+		idStr := strings.TrimPrefix(query, "#")
+		if id, err := strconv.Atoi(idStr); err == nil {
+			issue, err := s.client.GetIssue(id)
+			if err != nil {
+				return nil, err
+			}
+
+			ni := NewIssue(
+				issue.ID,
+				fmt.Sprintf("%s/issues/%d", s.GetBaseURL(), issue.ID),
+				issue.Author.Name,
+				s.cleanTitle(issue.Subject),
+				issue.Description,
+				&Project{
+					id:   issue.Project.ID,
+					name: issue.Project.Name,
+				},
+			)
+			return []*Issue{ni}, nil
+		}
+	}
+
+	// Regular search for non-ID queries
 	issues, err := s.client.Search(models.SearchParams{
 		Query: query,
 	})
@@ -124,15 +223,21 @@ func (s *IssueService) Search(query string) ([]*Issue, error) {
 
 	var result []*Issue
 	for _, issue := range issues.Results {
-		title := s.cleanTitle(issue.Title)
+		i, err := s.client.GetIssue(issue.ID)
+		if err != nil {
+			return nil, err
+		}
 
 		ni := NewIssue(
 			issue.ID,
 			issue.URL,
-			"none",
-			title,
-			issue.Description,
-			nil,
+			i.Author.Name,
+			s.cleanTitle(i.Subject),
+			i.Description,
+			&Project{
+				id:   i.Project.ID,
+				name: i.Project.Name,
+			},
 		)
 		result = append(result, ni)
 	}
