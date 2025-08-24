@@ -113,7 +113,7 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 func (v *ListView) Render() string {
 	listView := v.list.View()
 
-	helpText := "↑/↓: navigate • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
+	helpText := "↑/↓ • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
 	helpStyle := lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Muted).
 		Background(themes.TokyoNight.Background).
