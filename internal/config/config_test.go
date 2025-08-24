@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,9 +143,9 @@ redmine:
 	if err == nil {
 		t.Fatal("expected error for invalid config, got nil")
 	}
-	// Check that the error message contains information about invalid config
-	errStr := err.Error()
-	if !strings.Contains(errStr, "invalid config") {
-		t.Errorf("expected error message to contain 'invalid config', got: %v", err)
+
+	var missingFieldErr *MissingFieldError
+	if !errors.As(err, &missingFieldErr) {
+		t.Errorf("expected error to be of type MissingFieldError, got: %v", err)
 	}
 }

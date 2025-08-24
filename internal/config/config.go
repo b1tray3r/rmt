@@ -36,7 +36,7 @@ func LoadConfig(file string) (*Config, error) {
 	}
 
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid config: %w", err)
+		return nil, err
 	}
 
 	return &config, nil
