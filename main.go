@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/b1tray3r/rmt/internal/config"
 	"github.com/b1tray3r/rmt/internal/redmine"
@@ -11,30 +12,40 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// run starts the TUI application
-func run() error {
-	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfigHome == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get user home directory: %w", err)
+func loadConfig() (*config.Config, error) {
+	configPath := "./"
+	if _, err := os.Stat(configPath + "config.yml"); err != nil {
+		xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfigHome == "" {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get user home directory: %w", err)
+			}
+			xdgConfigHome = filepath.Join(homeDir, ".config")
 		}
-		xdgConfigHome = homeDir + "/.config"
+
+		configPath = filepath.Join(xdgConfigHome, "rmt") + "/"
 	}
-	configFile := xdgConfigHome + "/rmt/config.yml"
+
+	configFile := configPath + "config.yml"
 
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid config: %w", err)
+	return cfg, nil
+}
+
+func run() error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed loading config: %w", err)
 	}
 
 	client := redmine.NewRestClient(cfg.Redmine.URL, cfg.Redmine.Token)
 
-	issueService := domain.NewIssueService(client)
+	issueService := domain.NewRedmineIssueRepository(client)
 
 	program := tea.NewProgram(
 		tui.NewApplication(issueService),
