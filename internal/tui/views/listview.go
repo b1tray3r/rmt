@@ -47,7 +47,7 @@ func NewListView(maxWidth int) *ListView {
 }
 
 func (v *ListView) SetSize(width, height int) {
-	v.list.SetSize(width, height-3)
+	v.list.SetSize(width-8, height-4)
 }
 
 func (v *ListView) SetItems(items []*domain.Issue) {
