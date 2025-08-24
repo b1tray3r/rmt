@@ -30,7 +30,7 @@ func NewLoadingView(width int, message string) *LoadingView {
 // SetSize sets the dimensions of the LoadingView.
 func (v *LoadingView) SetSize(width, height int) {
 	v.width = width
-	v.height = height
+	v.height = height - 3
 }
 
 // Init initializes the LoadingView and returns the spinner tick command.
@@ -52,7 +52,7 @@ func (v *LoadingView) Render() string {
 
 	messageStyle := lipgloss.NewStyle().
 		Background(themes.TokyoNight.Background).
-		Foreground(themes.TokyoNight.Background).
+		Foreground(themes.TokyoNight.Foreground).
 		Bold(true)
 
 	content := lipgloss.JoinVertical(

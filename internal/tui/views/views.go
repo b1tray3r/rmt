@@ -23,8 +23,8 @@ type RMTIssueDelegate struct {
 	maxWidth int
 }
 
-func (d RMTIssueDelegate) Height() int                             { return 5 }
-func (d RMTIssueDelegate) Spacing() int                            { return 1 }
+func (d RMTIssueDelegate) Height() int                             { return 3 }
+func (d RMTIssueDelegate) Spacing() int                            { return 0 }
 func (d RMTIssueDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d RMTIssueDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	issue, ok := item.(*domain.Issue)
@@ -73,7 +73,7 @@ func (d RMTIssueDelegate) Render(w io.Writer, m list.Model, index int, item list
 
 	fmt.Fprint(w, titleStyle.Render(prefix+title))
 	fmt.Fprint(w, "\n")
-	fmt.Fprint(w, descStyle.Padding(1, 2).Render(description))
+	fmt.Fprint(w, descStyle.Padding(0, 1).PaddingBottom(1).Render(description))
 }
 
 func (d RMTIssueDelegate) highlightMatches(text, filter string) string {

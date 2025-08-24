@@ -77,7 +77,7 @@ func NewSearchView(width int) *SearchView {
 
 func (v *SearchView) SetSize(width, height int) {
 	v.width = width
-	v.height = height
+	v.height = height - 1
 }
 
 // Init initializes the SearchView and returns the blinking cursor command.
