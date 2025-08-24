@@ -6,6 +6,7 @@ import (
 	"github.com/b1tray3r/rmt/internal/tui/domain"
 	"github.com/b1tray3r/rmt/internal/tui/messages"
 	"github.com/b1tray3r/rmt/internal/tui/themes"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -13,12 +14,35 @@ import (
 type IssueView struct {
 	width, height int
 	Issue         *domain.Issue
+	viewport      viewport.Model
 }
 
-func NewIssueView(width int, issue *domain.Issue) *IssueView {
+func NewIssueView(width, height int, issue *domain.Issue) *IssueView {
+	// Count the number of newline characters in the issue's full description.
+	desc := issue.FullDescription()
+	lineCount := 1
+	for _, c := range desc {
+		if c == '\n' {
+			lineCount++
+		}
+	}
+
+	maxheight := height - 12
+	if lineCount <= maxheight {
+		if lineCount < maxheight {
+			for i := lineCount; i < maxheight; i++ {
+				desc += "\n"
+			}
+		}
+	}
+
+	vp := viewport.New(width-4, maxheight)
+	vp.SetContent(desc)
+
 	return &IssueView{
-		width: width,
-		Issue: issue,
+		width:    width,
+		Issue:    issue,
+		viewport: vp,
 	}
 }
 
@@ -29,6 +53,8 @@ func (v *IssueView) Init() tea.Cmd {
 
 // Update updates the IssueView based on the incoming message.
 func (v *IssueView) Update(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -36,10 +62,30 @@ func (v *IssueView) Update(msg tea.Msg) tea.Cmd {
 			return func() tea.Msg {
 				return messages.TimeEntryCreateMsg{Issue: v.Issue}
 			}
+		case "up", "k":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
+		case "down", "j":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
+		case "pgup":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
+		case "pgdown":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
+		case "home":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
+		case "end":
+			v.viewport, cmd = v.viewport.Update(msg)
+			return cmd
 		}
 	}
 
-	return nil
+	// Update viewport with other messages
+	v.viewport, cmd = v.viewport.Update(msg)
+	return cmd
 }
 
 // Render renders the IssueView as a string.
@@ -66,12 +112,12 @@ func (v *IssueView) Render() string {
 		lipgloss.Left,
 		style.Italic(true).Render(fmt.Sprintf("#%d", v.Issue.ID())),
 		style.Render(" "),
-		style.Bold(true).Render(v.Issue.Title()),
+		style.Bold(true).Render(v.Issue.FullTitle()),
 		style.Foreground(themes.TokyoNight.Primary).Render(" by "),
 		style.Italic(true).Foreground(themes.TokyoNight.Primary).Render(v.Issue.Author()),
 	)
 
-	helpText := "t: log time • esc: back • ctrl+c: quit"
+	helpText := "↑/↓/j/k: scroll • pgup/pgdown: page scroll • home/end: jump • t: log time • esc: back • ctrl+c: quit"
 	help := lipgloss.NewStyle().
 		Foreground(themes.TokyoNight.Muted).
 		Background(themes.TokyoNight.Background).
@@ -87,14 +133,14 @@ func (v *IssueView) Render() string {
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		projectInfo,
-		linkInfo,
-		style.Width(v.width).Render(titleInfo),
-		style.PaddingTop(2).Height(v.height-4).Render(v.Issue.Description()),
+		style.Padding(1, 0, 1, 0).Render(linkInfo),
+		style.Width(v.width).PaddingBottom(1).Render(titleInfo),
+		style.PaddingBottom(1).Render(v.viewport.View()),
 		help,
 	)
 }
 
 func (v *IssueView) SetSize(width, height int) {
-	v.width = width
-	v.height = height - 2
+	v.width = width - 4
+	v.height = height
 }

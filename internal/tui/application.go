@@ -23,16 +23,16 @@ type Application struct {
 	currentView int
 	views       map[int]views.View
 
-	issueService *domain.IssueService
+	issueService *domain.RedmineIssueRepository
 }
 
 // NewApplication creates and returns a new Application instance.
-func NewApplication(issueService *domain.IssueService) *Application {
+func NewApplication(issueService *domain.RedmineIssueRepository) *Application {
 	return &Application{
-		width:  80,
+		width:  75,
 		height: 0,
 		views: map[int]views.View{
-			SearchView: views.NewSearchView(80),
+			SearchView: views.NewSearchView(75),
 		},
 		issueService: issueService,
 	}
@@ -46,14 +46,11 @@ func (a *Application) Init() tea.Cmd {
 }
 
 func (a *Application) searchIssues(query string) tea.Cmd {
-	results, err := a.issueService.Search(query)
-	if err != nil {
-		return func() tea.Msg {
+	return func() tea.Msg {
+		results, err := a.issueService.Search(query)
+		if err != nil {
 			return messages.SearchCompletedMsg{Error: err}
 		}
-	}
-
-	return func() tea.Msg {
 		return messages.SearchCompletedMsg{Results: results}
 	}
 }
@@ -62,8 +59,15 @@ func (a *Application) searchIssues(query string) tea.Cmd {
 func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		a.width = msg.Width - 2
-		a.height = msg.Height - 4
+		a.width = 75
+		a.height = 25
+
+		if msg.Width > a.width {
+			a.width = msg.Width - 2
+		}
+		if msg.Height > a.height {
+			a.height = msg.Height - 4
+		}
 
 		for _, view := range a.views {
 			view.SetSize(a.width, a.height)
@@ -87,7 +91,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = a.views[SearchView].Update(msg)
 			}
 			return a, cmd
-		case "ctrl+f":
+		case "alt+f":
 			a.currentView = SearchView
 
 			var cmd tea.Cmd
@@ -102,7 +106,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Switch to loading view
 		a.currentView = LoadingView
 		lv := views.NewLoadingView(a.width, "Searching issues")
-		lv.SetSize(a.width, a.height-4)
+		lv.SetSize(a.width, a.height)
 		a.views[LoadingView] = lv
 
 		// Start the search operation
@@ -113,12 +117,14 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.TimeEntryCreateMsg:
 		a.currentView = TimeLogView
-		iv := views.NewIssueView(a.width, msg.Issue)
+		iv := views.NewIssueView(a.width, a.height, msg.Issue)
 		iv.SetSize(a.width, a.height)
 		a.views[IssueView] = iv
 
-		tv := views.NewTimeLogView(a.width, a.height, msg.Issue)
-		tv.SetSize(a.width, a.height)
+		tv, err := views.NewTimeEntryView(a.width, a.height, msg.Issue, a.issueService, a.issueService)
+		if err != nil {
+			return a, nil
+		}
 		a.views[TimeLogView] = tv
 		return a, tv.Init()
 
@@ -139,7 +145,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.IssueSelectedMsg:
 		a.currentView = IssueView
-		iv := views.NewIssueView(a.width, msg.Issue)
+		iv := views.NewIssueView(a.width, a.height, msg.Issue)
 		iv.SetSize(a.width, a.height)
 		a.views[IssueView] = iv
 		return a, iv.Init()

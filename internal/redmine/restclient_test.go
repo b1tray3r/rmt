@@ -26,6 +26,13 @@ func TestNewRestClient(t *testing.T) {
 	}
 }
 
+func TestRestClient_GetBaseURL(t *testing.T) {
+	client := NewRestClient("https://example.com/", "test-api-key")
+	if client.GetBaseURL() != "https://example.com" {
+		t.Errorf("expected baseURL 'https://example.com', got '%s'", client.GetBaseURL())
+	}
+}
+
 // TestRestClient_Login tests the login functionality with mock server.
 func TestRestClient_Login(t *testing.T) {
 	tests := []struct {
@@ -177,47 +184,6 @@ func TestRestClient_SearchError(t *testing.T) {
 	}
 	if !contains(err.Error(), "search failed with status: 400") {
 		t.Errorf("expected error to contain 'search failed with status: 400', got '%s'", err.Error())
-	}
-}
-
-// TestRestClient_StubMethods tests that stub methods return appropriate errors.
-func TestRestClient_StubMethods(t *testing.T) {
-	client := NewRestClient("https://example.com", "test-key")
-
-	// Test GetIssue stub
-	issue, err := client.GetIssue(1)
-	if issue != nil {
-		t.Error("expected nil issue from stub method")
-	}
-	if err == nil || !contains(err.Error(), "GetIssue not implemented yet") {
-		t.Errorf("expected 'GetIssue not implemented yet' error, got %v", err)
-	}
-
-	// Test GetProject stub
-	project, err := client.GetProject(1)
-	if project != nil {
-		t.Error("expected nil project from stub method")
-	}
-	if err == nil || !contains(err.Error(), "GetProject not implemented yet") {
-		t.Errorf("expected 'GetProject not implemented yet' error, got %v", err)
-	}
-
-	// Test GetProjects stub
-	projects, err := client.GetProjects()
-	if projects != nil {
-		t.Error("expected nil projects from stub method")
-	}
-	if err == nil || !contains(err.Error(), "GetProjects not implemented yet") {
-		t.Errorf("expected 'GetProjects not implemented yet' error, got %v", err)
-	}
-
-	// Test CreateTimeEntry stub
-	timeEntry, err := client.CreateTimeEntry(models.CreateTimeEntryParams{})
-	if timeEntry != nil {
-		t.Error("expected nil time entry from stub method")
-	}
-	if err == nil || !contains(err.Error(), "CreateTimeEntry not implemented yet") {
-		t.Errorf("expected 'CreateTimeEntry not implemented yet' error, got %v", err)
 	}
 }
 

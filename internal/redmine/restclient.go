@@ -23,18 +23,22 @@ type RedmineIssueGetter interface {
 
 type RedmineProjectGetter interface {
 	GetProject(projectID int) (*models.Project, error)
-	GetProjects() ([]models.Project, error)
 }
 
 type RedmineTimeEntryCreator interface {
 	CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error)
 }
 
+type RedmineBaseURLGetter interface {
+	GetBaseURL() string
+}
+
 type RedmineAPI interface {
 	RedmineSearcher
-	/*RedmineIssueGetter
 	RedmineProjectGetter
-	RedmineTimeEntryCreator*/
+	RedmineIssueGetter
+	RedmineBaseURLGetter
+	RedmineTimeEntryCreator
 }
 
 type RestClient struct {
@@ -53,8 +57,11 @@ func NewRestClient(baseURL, apiKey string) *RestClient {
 	}
 }
 
+func (c *RestClient) GetBaseURL() string {
+	return c.baseURL
+}
+
 func (c *RestClient) Login(ctx context.Context) error {
-	// Test authentication by trying to get current user info
 	req, err := c.newRequest(ctx, "GET", "/users/current.json", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create login request: %w", err)
@@ -77,8 +84,6 @@ func (c *RestClient) Login(ctx context.Context) error {
 	return nil
 }
 
-// newRequest creates a new HTTP request with common headers and authentication.
-// newRequest sets up the request with proper API key authentication and content type headers.
 func (c *RestClient) newRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
 	fullURL := c.baseURL + path
 	req, err := http.NewRequestWithContext(ctx, method, fullURL, body)
@@ -86,7 +91,6 @@ func (c *RestClient) newRequest(ctx context.Context, method, path string, body i
 		return nil, err
 	}
 
-	// Set authentication header
 	req.Header.Set("X-Redmine-API-Key", c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
@@ -139,30 +143,97 @@ func (c *RestClient) Search(params models.SearchParams) (*models.SearchResults, 
 	return &results, nil
 }
 
-// GetIssue retrieves a specific issue by ID from the Redmine instance.
-// GetIssue is a stub implementation that will be implemented in future iterations.
-func (c *RestClient) GetIssue(issueID int) (*models.Issue, error) {
-	// TODO: Implement GetIssue method
-	return nil, fmt.Errorf("GetIssue not implemented yet")
+func (c *RestClient) GetIssue(id int) (*models.Issue, error) {
+	ctx := context.Background()
+
+	req, err := c.newRequest(ctx, "GET", fmt.Sprintf("/issues/%d.json", id), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GetIssue request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute GetIssue request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GetIssue failed with status: %d", resp.StatusCode)
+	}
+
+	var issueResponse struct {
+		Issue models.Issue `json:"issue"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&issueResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode GetIssue response: %w", err)
+	}
+
+	return &issueResponse.Issue, nil
 }
 
-// GetProject retrieves a specific project by ID from the Redmine instance.
-// GetProject is a stub implementation that will be implemented in future iterations.
-func (c *RestClient) GetProject(projectID interface{}) (*models.Project, error) {
-	// TODO: Implement GetProject method
-	return nil, fmt.Errorf("GetProject not implemented yet")
+func (c *RestClient) GetProject(id int) (*models.Project, error) {
+	ctx := context.Background()
+
+	req, err := c.newRequest(ctx, "GET", fmt.Sprintf("/projects/%d.json?include=time_entry_activities", id), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GetProject request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute GetProject request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GetProject failed with status: %d", resp.StatusCode)
+	}
+
+	var projectResponse struct {
+		Project models.Project `json:"project"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&projectResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode GetProject response: %w", err)
+	}
+
+	return &projectResponse.Project, nil
 }
 
-// GetProjects retrieves all accessible projects from the Redmine instance.
-// GetProjects is a stub implementation that will be implemented in future iterations.
-func (c *RestClient) GetProjects() ([]models.Project, error) {
-	// TODO: Implement GetProjects method
-	return nil, fmt.Errorf("GetProjects not implemented yet")
-}
-
-// CreateTimeEntry creates a new time entry in the Redmine instance.
-// CreateTimeEntry is a stub implementation that will be implemented in future iterations.
 func (c *RestClient) CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error) {
-	// TODO: Implement CreateTimeEntry method
-	return nil, fmt.Errorf("CreateTimeEntry not implemented yet")
+	ctx := context.Background()
+
+	payload := struct {
+		TimeEntry models.CreateTimeEntryParams `json:"time_entry"`
+	}{
+		TimeEntry: params,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal CreateTimeEntry payload: %w", err)
+	}
+
+	req, err := c.newRequest(ctx, "POST", "/time_entries.json", strings.NewReader(string(body)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CreateTimeEntry request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute CreateTimeEntry request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("CreateTimeEntry failed with status: %d", resp.StatusCode)
+	}
+
+	var timeEntryResponse struct {
+		TimeEntry models.TimeEntry `json:"time_entry"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&timeEntryResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode CreateTimeEntry response: %w", err)
+	}
+
+	return &timeEntryResponse.TimeEntry, nil
 }
