@@ -50,8 +50,8 @@ func (i *Issue) FilterValue() string {
 
 func (i *Issue) Title() string {
 	runes := []rune(i.title)
-	if len(runes) > 75 {
-		return string(runes[:75])
+	if len(runes) > 55 {
+		return string(runes[:55])
 	}
 	return i.title
 }
@@ -66,8 +66,8 @@ func (i *Issue) Description() string {
 	processed = strings.ReplaceAll(processed, "\n", " ")
 	processed = strings.Join(strings.Fields(processed), " ")
 	runes := []rune(processed)
-	if len(runes) > 75 {
-		return string(runes[:75])
+	if len(runes) > 55 {
+		return string(runes[:55])
 	}
 	if len(runes) == 0 {
 		return "-- no description --"
