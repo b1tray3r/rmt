@@ -119,15 +119,20 @@ func (v *IssueView) Render() string {
 
 	helpText := "↑/↓/j/k: scroll • pgup/pgdown: page scroll • home/end: jump • t: log time • esc: back • ctrl+c: quit"
 	help := lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
+		Foreground(themes.TokyoNight.Foreground).
 		Background(themes.TokyoNight.Background).
 		Padding(0, 1).
+		Width(v.width).
 		Render(helpText)
 
 	linkInfo := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		style.Padding(0, 0, 0, v.width-50).Foreground(themes.TokyoNight.Secondary).Render("  "),
-		style.Foreground(themes.TokyoNight.Link).Render(v.Issue.Link()),
+		style.Padding(0, 0, 0, v.width-50).
+			Foreground(themes.TokyoNight.Secondary).
+			Render("  "),
+		style.Foreground(themes.TokyoNight.Link).
+			Width(50).
+			Render(v.Issue.Link()),
 	)
 
 	return lipgloss.JoinVertical(

@@ -60,7 +60,7 @@ func (v *LoadingView) Render() string {
 		messageStyle.Render(v.message),
 		"",
 		lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Muted).
+			Foreground(themes.TokyoNight.Foreground).
 			Render(spinnerView),
 	)
 

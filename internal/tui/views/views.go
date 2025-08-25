@@ -54,18 +54,18 @@ func (d RMTIssueDelegate) Render(w io.Writer, m list.Model, index int, item list
 			Bold(true).
 			Width(d.maxWidth)
 		descStyle = lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Muted).
+			Foreground(themes.TokyoNight.Foreground).
 			Background(themes.TokyoNight.Background).
 			Italic(true).
 			Width(d.maxWidth)
 	} else {
 		titleStyle = lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Primary).
+			Foreground(themes.TokyoNight.Foreground).
 			Background(themes.TokyoNight.Background).
 			Bold(true).
 			Width(d.maxWidth)
 		descStyle = lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Border).
+			Foreground(themes.TokyoNight.Foreground).
 			Background(themes.TokyoNight.Background).
 			Italic(true).
 			Width(d.maxWidth)

@@ -25,7 +25,7 @@ func NewListView(maxWidth int) *ListView {
 
 	// Apply Tokyo Night theme to list styles (help text, status bar, etc.)
 	list.Styles.HelpStyle = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
+		Foreground(themes.TokyoNight.Foreground).
 		Background(themes.TokyoNight.Background)
 
 	list.Styles.StatusBar = lipgloss.NewStyle().
@@ -115,7 +115,7 @@ func (v *ListView) Render() string {
 
 	helpText := "↑/↓ • enter: select • /: filter • t: log time • esc: back • ctrl+c: quit"
 	helpStyle := lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
+		Foreground(themes.TokyoNight.Foreground).
 		Background(themes.TokyoNight.Background).
 		Padding(0, 1).
 		Render(helpText)

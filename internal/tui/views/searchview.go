@@ -27,7 +27,7 @@ func NewSearchView(width int) *SearchView {
 	// Apply Tokyo Night theme styling to placeholder
 	ti.PlaceholderStyle = ti.PlaceholderStyle.
 		Background(themes.TokyoNight.Background).
-		Foreground(themes.TokyoNight.Muted)
+		Foreground(themes.TokyoNight.Foreground)
 
 	// Also style the text input itself to match the theme
 	ti.TextStyle = ti.TextStyle.
@@ -50,7 +50,7 @@ func NewSearchView(width int) *SearchView {
 
 	// Apply Tokyo Night theme to list styles (help text, status bar, etc.)
 	list.Styles.HelpStyle = lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
+		Foreground(themes.TokyoNight.Foreground).
 		Background(themes.TokyoNight.Background)
 
 	list.Styles.StatusBar = lipgloss.NewStyle().
@@ -141,7 +141,7 @@ func (v *SearchView) Render() string {
 		Render(v.views[Favorites].(list.Model).View())
 
 	hint := lipgloss.NewStyle().
-		Foreground(themes.TokyoNight.Muted).
+		Foreground(themes.TokyoNight.Foreground).
 		Render("Press 'Enter' to search, 'Esc' to clear, 'Ctrl+c' to quit")
 
 	return lipgloss.JoinVertical(lipgloss.Left,

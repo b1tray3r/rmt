@@ -40,12 +40,12 @@ var (
 			Padding(0, 1)
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(themes.TokyoNight.Muted).
+			Foreground(themes.TokyoNight.Foreground).
 			Italic(true).
 			Padding(0, 1)
 
 	emptyMessageStyle = lipgloss.NewStyle().
-				Foreground(themes.TokyoNight.Muted).
+				Foreground(themes.TokyoNight.Foreground).
 				Italic(true).
 				Padding(1, 2)
 
