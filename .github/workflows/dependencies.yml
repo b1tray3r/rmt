@@ -1,0 +1,26 @@
+name: Go Dependency Submission
+on:
+  push:
+    branches:
+      - master
+permissions:
+  contents: write
+env:
+  GOPROXY: ''
+  GOPRIVATE: ''
+jobs:
+  go-action-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ">=1.18.0"
+
+      - name: Run snapshot action
+        uses: actions/go-dependency-submission@v2
+        with:
+            go-mod-path: go.mod
+            go-build-target: main.go
