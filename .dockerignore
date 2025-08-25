@@ -1,0 +1,24 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Development files
+.vscode/
+.idea/
+*.log
+tmp/
+
+# Go build cache
+vendor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config files (exclude sensitive configs)
+config.yml
+!config.example.yml
