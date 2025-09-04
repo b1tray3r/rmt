@@ -46,6 +46,11 @@ func (m *mockIssueRepository) Search(query string) ([]*domain.Issue, error) {
 	return nil, nil
 }
 
+// SearchWithFilter searches issues using filters (mock implementation)
+func (m *mockIssueRepository) SearchWithFilter(query string) ([]*domain.Issue, error) {
+	return nil, nil
+}
+
 // CreateTimeEntry creates a mock time entry or returns an error
 func (m *mockIssueRepository) CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error) {
 	if m.err != nil {

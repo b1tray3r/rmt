@@ -48,7 +48,7 @@ func run() error {
 	issueService := domain.NewRedmineIssueRepository(client)
 
 	program := tea.NewProgram(
-		tui.NewApplication(issueService),
+		tui.NewApplication(issueService, cfg),
 		tea.WithAltScreen(),
 	)
 	if _, err := program.Run(); err != nil {

@@ -114,3 +114,78 @@ func (d RMTIssueDelegate) highlightMatches(text, filter string) string {
 func NewIssueDelegate(maxWidth int) list.ItemDelegate {
 	return RMTIssueDelegate{maxWidth: maxWidth}
 }
+
+func NewFavoriteDelegate(maxWidth int) list.ItemDelegate {
+	return RMTFavoriteDelegate{maxWidth: maxWidth}
+}
+
+type RMTFavoriteDelegate struct {
+	maxWidth int
+}
+
+func (d RMTFavoriteDelegate) Height() int                             { return 2 }
+func (d RMTFavoriteDelegate) Spacing() int                            { return 0 }
+func (d RMTFavoriteDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d RMTFavoriteDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	favorite, ok := item.(*domain.Favorite)
+	if !ok {
+		return
+	}
+
+	var (
+		name       = favorite.Name()
+		config     = favorite.Config()
+		isSelected = index == m.Index()
+		isFiltered = m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied
+	)
+
+	if isFiltered && m.FilterValue() != "" {
+		name = d.highlightMatches(name, m.FilterValue())
+		config = d.highlightMatches(config, m.FilterValue())
+	}
+
+	prefix := "⭐ "
+	var nameStyle, configStyle lipgloss.Style
+	if isSelected {
+		nameStyle = lipgloss.NewStyle().
+			Foreground(themes.TokyoNight.Warning).
+			Background(themes.TokyoNight.Background).
+			Bold(true).
+			Width(d.maxWidth)
+		configStyle = lipgloss.NewStyle().
+			Foreground(themes.TokyoNight.Foreground).
+			Background(themes.TokyoNight.Background).
+			Italic(true).
+			Width(d.maxWidth)
+	} else {
+		nameStyle = lipgloss.NewStyle().
+			Foreground(themes.TokyoNight.Primary).
+			Background(themes.TokyoNight.Background).
+			Bold(true).
+			Width(d.maxWidth)
+		configStyle = lipgloss.NewStyle().
+			Foreground(themes.TokyoNight.Foreground).
+			Background(themes.TokyoNight.Background).
+			Italic(true).
+			Width(d.maxWidth)
+	}
+
+	fmt.Fprint(w, nameStyle.Render(prefix+name))
+	fmt.Fprint(w, "\n")
+	fmt.Fprint(w, configStyle.Padding(0, 1).Render(config))
+}
+
+func (d RMTFavoriteDelegate) highlightMatches(text, filter string) string {
+	if filter == "" {
+		return text
+	}
+
+	// Simple highlighting - wrap matched text with color
+	highlightStyle := lipgloss.NewStyle().
+		Foreground(themes.TokyoNight.Highlight).
+		Background(themes.TokyoNight.Background).
+		Bold(true)
+
+	// This is a simple implementation - in a real app you might want more sophisticated matching
+	return strings.ReplaceAll(text, filter, highlightStyle.Render(filter))
+}

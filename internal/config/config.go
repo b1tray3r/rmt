@@ -15,9 +15,10 @@ type Config struct {
 
 // RedmineConfig holds Redmine-specific configuration.
 type RedmineConfig struct {
-	URL        string `yaml:"url"`
-	Token      string `yaml:"token"`
-	Activities struct {
+	URL             string `yaml:"url"`
+	Token           string `yaml:"token"`
+	FollowUpFieldID int    `yaml:"followUpFieldID"`
+	Activities      struct {
 		Prefix []string `yaml:"prefix"`
 	} `yaml:"activities"`
 }

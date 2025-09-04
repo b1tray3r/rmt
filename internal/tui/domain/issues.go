@@ -110,6 +110,7 @@ type IssueGetter interface {
 // IssueSearcher defines an interface for searching issues by a query string.
 type IssueSearcher interface {
 	Search(query string) ([]*Issue, error)
+	SearchWithFilter(query string) ([]*Issue, error) // New method for Redmine issue queries
 }
 
 type TimeEntryCreator interface {
@@ -243,4 +244,84 @@ func (s *RedmineIssueRepository) Search(query string) ([]*Issue, error) {
 	}
 
 	return result, nil
+}
+
+// SearchWithFilter searches issues using Redmine issue query format (actual Redmine format)
+func (s *RedmineIssueRepository) SearchWithFilter(query string) ([]*Issue, error) {
+	// Use the raw query string directly with Redmine's issues API
+	results, err := s.client.SearchIssuesRaw(query)
+	if err != nil {
+		return nil, err
+	}
+
+	var issueList []*Issue
+	for _, issue := range results.Issues {
+		ni := NewIssue(
+			issue.ID,
+			fmt.Sprintf("%s/issues/%d", s.GetBaseURL(), issue.ID),
+			issue.Author.Name,
+			s.cleanTitle(issue.Subject),
+			issue.Description,
+			&Project{
+				id:   issue.Project.ID,
+				name: issue.Project.Name,
+			},
+		)
+		issueList = append(issueList, ni)
+	}
+
+	return issueList, nil
+} // parseRedmineQuery parses a Redmine query string into an IssueFilter
+func (s *RedmineIssueRepository) parseRedmineQuery(query string) models.IssueFilter {
+	filter := models.IssueFilter{
+		Limit:        100,
+		CustomFields: make(map[int]string),
+	}
+
+	// Split query by & to get individual parameters
+	parts := strings.Split(query, "&")
+	for _, part := range parts {
+		if strings.Contains(part, "=") {
+			keyValue := strings.SplitN(part, "=", 2)
+			key := keyValue[0]
+			value := keyValue[1]
+
+			// Handle different parameter types
+			switch {
+			case strings.HasPrefix(key, "cf_"):
+				// Custom field parameter: cf_10=*this week*
+				if fieldIDStr := strings.TrimPrefix(key, "cf_"); fieldIDStr != "" {
+					if fieldID, err := strconv.Atoi(fieldIDStr); err == nil {
+						filter.CustomFields[fieldID] = value
+					}
+				}
+			case key == "assigned_to_id":
+				filter.AssignedTo = value
+			case key == "status_id":
+				if statusID, err := strconv.Atoi(value); err == nil {
+					filter.StatusID = []int{statusID}
+				}
+			case key == "tracker_id":
+				if trackerID, err := strconv.Atoi(value); err == nil {
+					filter.TrackerID = []int{trackerID}
+				}
+			case key == "project_id":
+				if projectID, err := strconv.Atoi(value); err == nil {
+					filter.ProjectID = []int{projectID}
+				}
+			case key == "subject":
+				filter.Subject = value
+			case key == "limit":
+				if limit, err := strconv.Atoi(value); err == nil {
+					filter.Limit = limit
+				}
+			case key == "offset":
+				if offset, err := strconv.Atoi(value); err == nil {
+					filter.Offset = offset
+				}
+			}
+		}
+	}
+
+	return filter
 }

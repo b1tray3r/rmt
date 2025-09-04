@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"strings"
+
+	"github.com/b1tray3r/rmt/internal/config"
 	"github.com/b1tray3r/rmt/internal/tui/domain"
 	"github.com/b1tray3r/rmt/internal/tui/messages"
 	"github.com/b1tray3r/rmt/internal/tui/themes"
@@ -24,17 +27,22 @@ type Application struct {
 	views       map[int]views.View
 
 	issueService *domain.RedmineIssueRepository
+	config       *config.Config
 }
 
 // NewApplication creates and returns a new Application instance.
-func NewApplication(issueService *domain.RedmineIssueRepository) *Application {
+func NewApplication(issueService *domain.RedmineIssueRepository, cfg *config.Config) *Application {
+	searchView := views.NewSearchView(75, cfg)
+	searchView.InitializeFavorites()
+
 	return &Application{
 		width:  75,
 		height: 0,
 		views: map[int]views.View{
-			SearchView: views.NewSearchView(75),
+			SearchView: searchView,
 		},
 		issueService: issueService,
+		config:       cfg,
 	}
 }
 
@@ -47,11 +55,22 @@ func (a *Application) Init() tea.Cmd {
 
 func (a *Application) searchIssues(query string) tea.Cmd {
 	return func() tea.Msg {
-		results, err := a.issueService.Search(query)
-		if err != nil {
-			return messages.SearchCompletedMsg{Error: err}
+		var results []*domain.Issue
+		var err error
+
+		// Determine if this is a Redmine query string (contains = or &) or a regular search
+		if strings.Contains(query, "=") || strings.Contains(query, "&") {
+			// Use filter search for Redmine query strings (e.g., from favorites)
+			results, err = a.issueService.SearchWithFilter(query)
+		} else {
+			// Use regular search for text queries
+			results, err = a.issueService.Search(query)
 		}
-		return messages.SearchCompletedMsg{Results: results}
+
+		if err != nil {
+			return messages.SearchCompletedMsg{Query: query, Error: err}
+		}
+		return messages.SearchCompletedMsg{Query: query, Results: results}
 	}
 }
 
@@ -75,22 +94,8 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			newIndex := a.currentView - 1
-			if newIndex == LoadingView {
-				newIndex = SearchView
-			}
-			// Skip the loading view
-			if _, ok := a.views[newIndex]; !ok {
-				newIndex = SearchView
-			}
-			a.currentView = newIndex
-
-			var cmd tea.Cmd
-			if newIndex == SearchView {
-				cmd = a.views[SearchView].Update(msg)
-			}
-			return a, cmd
+		case "ctrl+c":
+			return a, tea.Quit
 		case "alt+f":
 			a.currentView = SearchView
 
@@ -99,11 +104,30 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = a.views[SearchView].Update(msg)
 			}
 			return a, cmd
-		case "ctrl+c":
-			return a, tea.Quit
+		case "esc":
+			// Handle ESC for navigation, but ignore it completely in SearchView
+			if a.currentView != SearchView {
+				// ESC should navigate back to previous view
+				newIndex := a.currentView - 1
+
+				// Skip LoadingView when going back
+				if newIndex == LoadingView {
+					newIndex = SearchView
+				}
+
+				// If no previous view exists or invalid index, go to SearchView
+				if _, ok := a.views[newIndex]; !ok || newIndex < 0 {
+					newIndex = SearchView
+				}
+
+				// Change to the target view
+				a.currentView = newIndex
+				return a, nil
+			}
+			// If we're in SearchView, ignore ESC completely - don't pass it to the view
+			return a, nil
 		}
 	case messages.SearchSubmittedMsg:
-		// Switch to loading view
 		a.currentView = LoadingView
 		lv := views.NewLoadingView(a.width, "Searching issues")
 		lv.SetSize(a.width, a.height)
@@ -130,7 +154,17 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.SearchCompletedMsg:
 		if msg.Error != nil {
+			// Handle search error - switch back to search view and show error
 			a.currentView = SearchView
+			// Log error for debugging (in a real app, you'd show this to the user)
+			// For now, at least we return to search view so user can try again
+			return a, nil
+		}
+
+		if len(msg.Results) == 0 {
+			// No results found - stay in search view
+			a.currentView = SearchView
+			// TODO: Show "no results found" message to user
 			return a, nil
 		}
 

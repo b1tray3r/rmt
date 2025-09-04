@@ -4,6 +4,7 @@
 redmine:
   url: "https://your-redmine-instance.com"
   token: "your-api-token-here"
+  followUpFieldID: 88
   activities:
     prefix:
       - "Analysis"

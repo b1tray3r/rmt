@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -19,6 +20,11 @@ type RedmineSearcher interface {
 
 type RedmineIssueGetter interface {
 	GetIssue(issueID int) (*models.Issue, error)
+}
+
+type RedmineIssueSearcher interface {
+	SearchIssues(filter models.IssueFilter) (*models.IssueResults, error)
+	SearchIssuesRaw(queryString string) (*models.IssueResults, error)
 }
 
 type RedmineProjectGetter interface {
@@ -37,6 +43,7 @@ type RedmineAPI interface {
 	RedmineSearcher
 	RedmineProjectGetter
 	RedmineIssueGetter
+	RedmineIssueSearcher
 	RedmineBaseURLGetter
 	RedmineTimeEntryCreator
 }
@@ -236,4 +243,106 @@ func (c *RestClient) CreateTimeEntry(params models.CreateTimeEntryParams) (*mode
 	}
 
 	return &timeEntryResponse.TimeEntry, nil
+}
+
+// SearchIssues searches for issues using advanced filtering including custom fields.
+// SearchIssues queries the Redmine issues API with filtering parameters and returns paginated results.
+func (c *RestClient) SearchIssues(filter models.IssueFilter) (*models.IssueResults, error) {
+	ctx := context.Background()
+
+	// Marshal filter parameters using http/querystring for base parameters
+	queryParams, err := querystring.Marshal(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal issue filter parameters: %w", err)
+	}
+
+	// Add custom field parameters manually with proper URL encoding
+	customFieldParams := make([]string, 0, len(filter.CustomFields))
+	for fieldID, value := range filter.CustomFields {
+		if value != "" {
+			encodedValue := url.QueryEscape(value)
+			customFieldParams = append(customFieldParams, fmt.Sprintf("cf_%d=%s", fieldID, encodedValue))
+		}
+	}
+
+	// Combine regular and custom field parameters
+	allParams := string(queryParams)
+	if len(customFieldParams) > 0 {
+		if len(allParams) > 0 {
+			allParams += "&"
+		}
+		allParams += strings.Join(customFieldParams, "&")
+	}
+
+	// Construct the issues endpoint URL
+	issuesPath := "/issues.json"
+	if len(allParams) > 0 {
+		issuesPath += "?" + allParams
+	}
+
+	req, err := c.newRequest(ctx, "GET", issuesPath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create issues search request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute issues search request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("issues search failed with status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read issues search response: %w", err)
+	}
+
+	var result models.IssueResults
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse issues search response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// SearchIssuesRaw searches for issues using raw Redmine query string format.
+// This method accepts the exact query string format that Redmine uses in its web interface.
+func (c *RestClient) SearchIssuesRaw(queryString string) (*models.IssueResults, error) {
+	ctx := context.Background()
+
+	// Construct the issues endpoint URL with the raw query string
+	issuesPath := "/issues.json"
+	if queryString != "" {
+		issuesPath += "?" + queryString
+	}
+
+	req, err := c.newRequest(ctx, "GET", issuesPath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create raw issues search request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute raw issues search request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("raw issues search failed with status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read raw issues search response: %w", err)
+	}
+
+	var result models.IssueResults
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse raw issues search response: %w", err)
+	}
+
+	return &result, nil
 }
