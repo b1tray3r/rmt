@@ -170,7 +170,7 @@ func (s *RedmineIssueRepository) GetProjectActivities(projectID int, activityPat
 }
 
 // matchesActivityPatterns checks if an activity name matches any of the given patterns.
-// If no patterns are provided, it returns true (matches all).
+// matchesActivityPatterns returns true if no patterns are provided (matches all).
 func (s *RedmineIssueRepository) matchesActivityPatterns(activityName string, activityPatterns []string) bool {
 	if len(activityPatterns) == 0 {
 		return true
