@@ -117,7 +117,7 @@ type TimeEntryView struct {
 // NewTimeEntryView creates a new time entry view instance with the specified dimensions and context.
 // NewTimeEntryView initializes all necessary components including date picker, hours selector, and activity list.
 // It returns an error if the issue or issueRepository parameters are nil, or if activities cannot be loaded.
-func NewTimeEntryView(width, height int, issue *domain.Issue, issueRepository domain.IssueRepository, timeLogService domain.TimeEntryCreator) (*TimeEntryView, error) {
+func NewTimeEntryView(width, height int, activityPatterns []string, issue *domain.Issue, issueRepository domain.IssueRepository, timeLogService domain.TimeEntryCreator) (*TimeEntryView, error) {
 	if issue == nil {
 		return nil, fmt.Errorf("issue cannot be nil")
 	}
@@ -126,7 +126,7 @@ func NewTimeEntryView(width, height int, issue *domain.Issue, issueRepository do
 		return nil, fmt.Errorf("issueRepository cannot be nil")
 	}
 
-	activities, err := issueRepository.GetProjectActivities(issue.Project().ID())
+	activities, err := issueRepository.GetProjectActivities(issue.Project().ID(), activityPatterns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project activities: %w", err)
 	}
