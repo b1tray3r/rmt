@@ -145,7 +145,7 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		iv.SetSize(a.width, a.height)
 		a.views[IssueView] = iv
 
-		tv, err := views.NewTimeEntryView(a.width, a.height, msg.Issue, a.issueService, a.issueService)
+		tv, err := views.NewTimeEntryView(a.width, a.height, a.config.Redmine.Activities.Prefix, msg.Issue, a.issueService, a.issueService)
 		if err != nil {
 			return a, nil
 		}

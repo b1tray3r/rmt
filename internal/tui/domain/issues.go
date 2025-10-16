@@ -118,7 +118,7 @@ type TimeEntryCreator interface {
 }
 
 type ProjectActivityGetter interface {
-	GetProjectActivities(projectID int) (map[int]string, error)
+	GetProjectActivities(projectID int, activityPatterns []string) (map[int]string, error)
 }
 
 // IssueRepository composes the one-purpose interfaces for issue operations.
@@ -153,7 +153,7 @@ func (s *RedmineIssueRepository) cleanTitle(title string) string {
 	return title
 }
 
-func (s *RedmineIssueRepository) GetProjectActivities(projectID int) (map[int]string, error) {
+func (s *RedmineIssueRepository) GetProjectActivities(projectID int, activityPatterns []string) (map[int]string, error) {
 	project, err := s.client.GetProject(projectID)
 	if err != nil {
 		return nil, err
@@ -161,6 +161,18 @@ func (s *RedmineIssueRepository) GetProjectActivities(projectID int) (map[int]st
 
 	result := make(map[int]string)
 	for _, activity := range project.TimeEntryActivities {
+		if len(activityPatterns) > 0 {
+			matched := false
+			for _, pattern := range activityPatterns {
+				if strings.HasPrefix(activity.Name, pattern) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
 		result[activity.ID] = activity.Name
 	}
 

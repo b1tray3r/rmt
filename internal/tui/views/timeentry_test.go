@@ -26,7 +26,7 @@ func (m *mockIssueRepository) GetIssue(id int) (*domain.Issue, error) {
 }
 
 // GetProjectActivities returns mock activities or an error
-func (m *mockIssueRepository) GetProjectActivities(projectID int) (map[int]string, error) {
+func (m *mockIssueRepository) GetProjectActivities(projectID int, activityPatterns []string) (map[int]string, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -88,7 +88,7 @@ func TestNewTimeEntryView_Success(t *testing.T) {
 	issue := createTestIssue()
 	repo := &mockIssueRepository{}
 
-	view, err := NewTimeEntryView(80, 24, issue, repo, repo)
+	view, err := NewTimeEntryView(80, 24, []string{"Development"}, issue, repo, repo)
 
 	if err != nil {
 		t.Fatalf("NewTimeEntryView returned error: %v", err)
