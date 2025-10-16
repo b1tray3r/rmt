@@ -161,22 +161,28 @@ func (s *RedmineIssueRepository) GetProjectActivities(projectID int, activityPat
 
 	result := make(map[int]string)
 	for _, activity := range project.TimeEntryActivities {
-		if len(activityPatterns) > 0 {
-			matched := false
-			for _, pattern := range activityPatterns {
-				if strings.HasPrefix(activity.Name, pattern) {
-					matched = true
-					break
-				}
-			}
-			if !matched {
-				continue
-			}
+		if s.matchesActivityPatterns(activity.Name, activityPatterns) {
+			result[activity.ID] = activity.Name
 		}
-		result[activity.ID] = activity.Name
 	}
 
 	return result, nil
+}
+
+// matchesActivityPatterns checks if an activity name matches any of the given patterns.
+// If no patterns are provided, it returns true (matches all).
+func (s *RedmineIssueRepository) matchesActivityPatterns(activityName string, activityPatterns []string) bool {
+	if len(activityPatterns) == 0 {
+		return true
+	}
+
+	for _, pattern := range activityPatterns {
+		if strings.HasPrefix(activityName, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *RedmineIssueRepository) CreateTimeEntry(params models.CreateTimeEntryParams) (*models.TimeEntry, error) {
